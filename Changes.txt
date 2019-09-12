@@ -1,0 +1,17 @@
+----------------
+-- 2019.09.11 --
+----------------
+1.	Removed module Ghostscript.NET (using pdfium, don't need it)
+2.	RemoveNegative is renamed to FilterSubject
+3.	Added more functionality to FilterSubject - function. There are situations where sender adds messages after the standard subject. 
+	These messages has to be ignored
+
+----------------
+-- 2019.09.10 --
+----------------
+1.	Updated all dependencies and modules.
+2.	When reading the settings-file there may be an unhandled exception when the file exists, 
+	but the it's empty. Solution is to just delete it and create a new one. This happened 
+	when the settingsfile was transfered from one PC to another and the printer-queue does not have the same name
+	as the previous one. The exception occurs when opening the settings-dialog-box, and we could not actually
+	open the dialog box for adding the new settings.
