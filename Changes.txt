@@ -1,4 +1,10 @@
 ----------------
+-- 2019.09.18 --
+----------------
+1.	Added workaround for names consisting of two words(never thought of that)
+2.	Added dateformat in case of a formatexception on dateTime.
+
+----------------
 -- 2019.09.11 --
 ----------------
 1.	Removed module Ghostscript.NET (using pdfium, don't need it)
