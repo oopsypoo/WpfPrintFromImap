@@ -102,10 +102,35 @@ namespace WpfPrintFromImap
             List<String> str = FilterSubject(subj);
 
             CultureInfo cultureInfo = new CultureInfo("nb-NO");
+            uint no_of_pages = 0;
+            try
+            {
+                no_of_pages = uint.Parse(str[5]);
+            }
+            catch (FormatException)
+            {
+                //invalid numeric expression. we should concatenate index 4 & 5 into index 4 and delete index 5
+                str[4] = string.Concat(str[4], " ", str[5]);
+                str.Remove(str[5]);
+            }
 
-            packing_day = DateTime.ParseExact(str[1], "ddMMyy", cultureInfo);
+            try
+            {
+                var packing_day = DateTime.ParseExact(str[1], "ddMMyy", cultureInfo);
+            }
+            catch (FormatException)
+            {
+                try
+                {
+                    var packing_day = DateTime.ParseExact(str[1], "ddMMyyyy", cultureInfo); //just try..maybe it will work.
+                }
+                catch (FormatException ex)
+                {
+                    MessageBox.Show($"Cannot find date format of this header: {ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var packing_day = str[1];
+                }
+            }
             order_number = str[2] + " " + str[3];
-            no_of_pages = uint.Parse(str[5]);
             searchValue = string.Concat("Pakkedag ", str[1]);
             mailBody = bde;
             attachmentName = attachName;
@@ -152,7 +177,7 @@ namespace WpfPrintFromImap
                     this.imap_server = file.ReadLine();
                     this.imap_user = file.ReadLine();
                     string line = file.ReadLine();
-                    if (line != null)
+                    if (line != null) //try to do this ..bla bla bla
                     {
                         var pswd = System.Convert.FromBase64String(line);
                         this.imap_user_password = System.Text.Encoding.UTF8.GetString(pswd);
