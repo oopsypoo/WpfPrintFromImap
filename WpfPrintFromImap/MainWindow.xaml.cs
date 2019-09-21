@@ -102,7 +102,7 @@ namespace WpfPrintFromImap
             List<String> str = FilterSubject(subj);
 
             CultureInfo cultureInfo = new CultureInfo("nb-NO");
-            uint no_of_pages = 0;
+            no_of_pages = 0;
             try
             {
                 no_of_pages = uint.Parse(str[5]);
@@ -116,18 +116,17 @@ namespace WpfPrintFromImap
 
             try
             {
-                var packing_day = DateTime.ParseExact(str[1], "ddMMyy", cultureInfo);
+                packing_day = DateTime.ParseExact(str[1], "ddMMyy", cultureInfo);
             }
             catch (FormatException)
             {
                 try
                 {
-                    var packing_day = DateTime.ParseExact(str[1], "ddMMyyyy", cultureInfo); //just try..maybe it will work.
+                    packing_day = DateTime.ParseExact(str[1], "ddMMyyyy", cultureInfo); //just try..maybe it will work.
                 }
                 catch (FormatException ex)
                 {
-                    MessageBox.Show($"Cannot find date format of this header: {ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    var packing_day = str[1];
+                    MessageBox.Show($"Cannot find date format of this header: {ex}. Please remove mail with order number {str[3]}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             order_number = str[2] + " " + str[3];
