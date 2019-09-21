@@ -1,4 +1,11 @@
 ----------------
+-- 2019.09.20 --
+----------------
+1.	I copied the code from a test-program and forgot to remove the initialization of the variables locally. The variables are member-variables og the MailSnippet-class. My bad.
+	The result of not doing it was that only one copy of the attachment file was printed, and not the correct number.
+	I debugged at work, and I commit the changes at howm --oO
+
+----------------
 -- 2019.09.18 --
 ----------------
 1.	Added workaround for names consisting of two words(never thought of that)
