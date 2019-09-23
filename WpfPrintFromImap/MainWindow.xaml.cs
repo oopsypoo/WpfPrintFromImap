@@ -66,11 +66,12 @@ namespace WpfPrintFromImap
         {
             return this.subject;
         }
-        /**
-         * This function will try to filter out some of the most common variations of the subject, that has impact on the routine.
-         * Problem arise if mail is forwarded or replied to and some senders adding messages in the subject-line. There's alot of variations,
-         * so I'll just have to add them as they come.
-         **/
+        /// <summary>
+        /// This function will try to filter out some of the most common variations of the subject, that has impact on the routine.
+        /// Problem arise if mail is forwarded or replied to and some senders adding messages in the subject-line. There's alot of variations,
+        /// so I'll just have to add them as they come.
+        /// </summary>
+        /// <returns>Mail-subject in a List of strings</returns>
         public List<String> FilterSubject(String str)
         {
             List<String> T = new List<String>();
@@ -96,6 +97,12 @@ namespace WpfPrintFromImap
             }
             return T;
         }
+        /// <summary>
+        /// Fills in private members of this class. Fills in info for one mail. For example date, number of attachments to print...etc
+        /// </summary>
+        /// <param name="subj">Subject of the mail</param>
+        /// <param name="bde">Bodypart of the mail</param>
+        /// <param name="attachName">name of attachment</param>
         public MailSnippet(string subj, string bde, string attachName)
         {
             subject = subj;
