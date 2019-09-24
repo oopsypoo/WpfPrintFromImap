@@ -69,6 +69,28 @@ namespace WpfPrintFromImap
             return this.subject;
         }
         /// <summary>
+        /// splits a string that either starts with numerical values or starts with alphabetical values a-zA-Z
+        /// </summary>
+        /// <param name="value">string to split</param>
+        /// <param name="alpha">boolean telling if we should expect alpha first or numerical first</param>
+        /// <returns></returns>
+        public List<string> SplitString(string value, bool alpha)
+        {
+            List<string> T = new List<string>();
+            Regex re;
+            if (alpha)
+                re = new Regex(@"([a-zA-Z]+)(\d+)");
+            else
+                re = new Regex(@"(\d+)([a-zA-Z]+)");
+
+            Match result = re.Match(value);
+
+            T.Add(result.Groups[1].Value);
+            T.Add(result.Groups[2].Value);
+
+            return T;
+        }
+        /// <summary>
         /// This function will try to filter out some of the most common variations of the subject, that has impact on the routine.
         /// Problem arise if mail is forwarded or replied to and some senders adding messages in the subject-line. There's alot of variations,
         /// so I'll just have to add them as they come.
@@ -77,6 +99,7 @@ namespace WpfPrintFromImap
         public List<String> FilterSubject(String str)
         {
             List<String> T = new List<String>();
+            str = str.ToLower();
             //remove all '-' characters. Had a case where no_of_pages was '-XX'. Got an exception ofcourse so I decided to remove it from the start
             var charsToRemove = new string[] { "-" };
             foreach (var c in charsToRemove)
@@ -90,29 +113,45 @@ namespace WpfPrintFromImap
             {
                 if ((word.ToString() == "-") ||
                     (word.ToString() == " ") ||
-                    (word.ToString().ToLower() == "fw:") || //forwarded message
-                    (word.ToString().ToLower() == "re:") || //replied to message
+                    (word.ToString() == "fw:") || //forwarded message
+                    (word.ToString() == "re:") || //replied to message
                     (word.ToString() == ""))
                     continue;
                 else
                 {
                     if (prevWord != null)
-                        if (prevWord.ToString().ToLower() == "ark") //someone is trying to add some kind of msg after the standard subject..we don't want it..break off.
-                            break;
-                    //another special case where index 2 and 3 are concatenated in subject like this: ordre240919
-                    //so: look for the string "ordre" in index 2, if it's longer than 5 it means it's concatenated and we have to split it 
-                    if (word.Contains("ordre")) 
                     {
-                        if (word.Length > 5)//then something is wrong. I'm guessing order-number and "ordre" is concatenated
+                        if (prevWord.ToString().EndsWith("ark"))//we can catch the situation where a number is "clings" to "ark". Like this 17ark
                         {
-                            Regex re = new Regex(@"([a-zA-Z]+)(\d+)");
-                            Match result = re.Match(word);
-
-                            string alphaPart = result.Groups[1].Value;
-                            string numberPart = result.Groups[2].Value;
-                            T.Add(alphaPart);
-                            T.Add(numberPart);
-                            prevWord = numberPart;
+                            if (prevWord.Length > "ark".Length)//we're assuming now that there's a numerical value clinging to the string "ark"
+                            {
+                                var S = SplitString(prevWord, false);
+                                T.Remove(prevWord);
+                                T.Add(S[0]);
+                                T.Add(S[1]);
+                            }
+                            break;
+                        }
+                    }
+                    if (word.StartsWith("ordre"))
+                    {
+                        if (word.Length > "ordre".Length)//then something is wrong. I'm guessing order-number and "ordre" is concatenated
+                        {
+                            var S = SplitString(word, true);
+                            T.Add(S[0]);
+                            T.Add(S[1]);
+                            prevWord = S[1];
+                            continue;
+                        }
+                    }//let's do the same thing with "Pakkedag"
+                    else if (word.StartsWith("pakkedag"))
+                    {
+                        if (word.Length > "pakkedag".Length)
+                        {
+                            var S = SplitString(word, true);
+                            T.Add(S[0]);
+                            T.Add(S[1]);
+                            prevWord = S[1];
                             continue;
                         }
                     }

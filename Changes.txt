@@ -1,10 +1,12 @@
 ----------------
 -- 2019.09.24 --
 ----------------
-1. Had to fix a couple of special cases in function FilterSuibject, where the user has not put a space between '-' and no of pages.
-2. In same function decided to remove all '-' from the original string.
-3. In same function, there's a special case where user has not put a space between the strings "ordre" and ORDER_NO
-4. In constructor-function for class MailSnippet: had to make special case for when city/place consists of 3 strings. 
+1.	Had to fix a couple of special cases in function FilterSubject, where the user has not put a space between '-' and no of pages.
+2.	In same function decided to remove all '-' from the original string.
+3.	In same function, there's a special case where user has not put a space between the strings "ordre" and ORDER_NO
+4.	In constructor-function for class MailSnippet: had to make special case for when city/place consists of 3 strings. 
+5.	Added new function SplitString(a, b) hich splits a string that has been concatenated by user. 
+	Example: ordre12345, which should be in the form "ordre 12345", or "12ARK" which should be in the form "12 ARK"
 
 ----------------
 -- 2019.09.23 --
