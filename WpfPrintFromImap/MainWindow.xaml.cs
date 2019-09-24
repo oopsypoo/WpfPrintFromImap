@@ -143,6 +143,17 @@ namespace WpfPrintFromImap
             catch (FormatException)
             {
                 //invalid numeric expression. we should concatenate index 4 & 5 into index 4 and delete index 5
+                //this is only valid if city/place consists of 2 words. If it consists of 3 words we have to make a check on 
+                //index 6. 
+                try
+                {
+                    no_of_pages = uint.Parse(str[6]);
+                }
+                catch (FormatException) 
+                {
+                    str[5] = string.Concat(str[5], " ", str[6]);
+                    str.Remove(str[6]);
+                }
                 str[4] = string.Concat(str[4], " ", str[5]);
                 str.Remove(str[5]);
             }
@@ -159,9 +170,11 @@ namespace WpfPrintFromImap
                 }
                 catch (FormatException ex)
                 {
-                    MessageBox.Show($"Cannot find date format of this header: {ex}. Please remove mail with order number {str[3]}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Cannot find date format of this header: {ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+            //at this point it should be safe to assume that we can parse index 5 of str
+            no_of_pages = uint.Parse(str[5]);
             order_number = str[2] + " " + str[3];
             searchValue = string.Concat("Pakkedag ", str[1]);
             mailBody = bde;
