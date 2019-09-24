@@ -17,6 +17,8 @@ using System.Drawing.Printing;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Text.RegularExpressions;
+
 
 namespace WpfPrintFromImap
 {
@@ -75,12 +77,19 @@ namespace WpfPrintFromImap
         public List<String> FilterSubject(String str)
         {
             List<String> T = new List<String>();
+            //remove all '-' characters. Had a case where no_of_pages was '-XX'. Got an exception ofcourse so I decided to remove it from the start
+            var charsToRemove = new string[] { "-" };
+            foreach (var c in charsToRemove)
+            {
+                str = str.Replace(c, string.Empty);
+            }
             string[] table = str.Split(' ');
-            
+
             string prevWord = null;
             foreach (string word in table)
             {
                 if ((word.ToString() == "-") ||
+                    (word.ToString() == " ") ||
                     (word.ToString().ToLower() == "fw:") || //forwarded message
                     (word.ToString().ToLower() == "re:") || //replied to message
                     (word.ToString() == ""))
@@ -90,6 +99,23 @@ namespace WpfPrintFromImap
                     if (prevWord != null)
                         if (prevWord.ToString().ToLower() == "ark") //someone is trying to add some kind of msg after the standard subject..we don't want it..break off.
                             break;
+                    //another special case where index 2 and 3 are concatenated in subject like this: ordre240919
+                    //so: look for the string "ordre" in index 2, if it's longer than 5 it means it's concatenated and we have to split it 
+                    if (word.Contains("ordre")) 
+                    {
+                        if (word.Length > 5)//then something is wrong. I'm guessing order-number and "ordre" is concatenated
+                        {
+                            Regex re = new Regex(@"([a-zA-Z]+)(\d+)");
+                            Match result = re.Match(word);
+
+                            string alphaPart = result.Groups[1].Value;
+                            string numberPart = result.Groups[2].Value;
+                            T.Add(alphaPart);
+                            T.Add(numberPart);
+                            prevWord = numberPart;
+                            continue;
+                        }
+                    }
                     T.Add(word);
                     //keep track of previous word so we can look for certain placeholders
                     prevWord = word;
