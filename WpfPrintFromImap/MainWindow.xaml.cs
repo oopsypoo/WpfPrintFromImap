@@ -99,67 +99,30 @@ namespace WpfPrintFromImap
         public List<String> FilterSubject(String str)
         {
             List<String> T = new List<String>();
+
+            int index = -1;
             str = str.ToLower();
-            //remove all '-' characters. Had a case where no_of_pages was '-XX'. Got an exception ofcourse so I decided to remove it from the start
-            var charsToRemove = new string[] { "-" };
+            var charsToRemove = new string[] { "-", " ", ",", "." };
             foreach (var c in charsToRemove)
             {
                 str = str.Replace(c, string.Empty);
             }
-            string[] table = str.Split(' ');
-
-            string prevWord = null;
-            foreach (string word in table)
+            index = str.IndexOf("pakkedag");
+            if (index >= 0)
             {
-                if ((word.ToString() == "-") ||
-                    (word.ToString() == " ") ||
-                    (word.ToString() == "fw:") || //forwarded message
-                    (word.ToString() == "re:") || //replied to message
-                    (word.ToString() == ""))
-                    continue;
-                else
-                {
-                    if (prevWord != null)
-                    {
-                        if (prevWord.ToString().EndsWith("ark"))//we can catch the situation where a number is "clings" to "ark". Like this 17ark
-                        {
-                            if (prevWord.Length > "ark".Length)//we're assuming now that there's a numerical value clinging to the string "ark"
-                            {
-                                var S = SplitString(prevWord, false);
-                                T.Remove(prevWord);
-                                T.Add(S[0]);
-                                T.Add(S[1]);
-                            }
-                            break;
-                        }
-                    }
-                    if (word.StartsWith("ordre"))
-                    {
-                        if (word.Length > "ordre".Length)//then something is wrong. I'm guessing order-number and "ordre" is concatenated
-                        {
-                            var S = SplitString(word, true);
-                            T.Add(S[0]);
-                            T.Add(S[1]);
-                            prevWord = S[1];
-                            continue;
-                        }
-                    }//let's do the same thing with "Pakkedag"
-                    else if (word.StartsWith("pakkedag"))
-                    {
-                        if (word.Length > "pakkedag".Length)
-                        {
-                            var S = SplitString(word, true);
-                            T.Add(S[0]);
-                            T.Add(S[1]);
-                            prevWord = S[1];
-                            continue;
-                        }
-                    }
-                    T.Add(word);
-                    //keep track of previous word so we can look for certain placeholders
-                    prevWord = word;
-                }
+                str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
             }
+            index = str.IndexOf("ark");
+            str = str.Remove(index);
+string pattern = @"(\d+)(\w+)(\d+)(\w+)(\d+)";
+            Match result = Regex.Match(str, pattern);
+
+            T.Add(result.Groups[1].Value); //date 
+            T.Add(result.Groups[2].Value); //"ordre"
+            T.Add(result.Groups[3].Value); //ordernumber
+            T.Add(result.Groups[4].Value); //place
+            T.Add(result.Groups[5].Value); //number of copies
+
             return T;
         }
         /// <summary>
@@ -174,38 +137,17 @@ namespace WpfPrintFromImap
             List<String> str = FilterSubject(subj);
 
             CultureInfo cultureInfo = new CultureInfo("nb-NO");
-            no_of_pages = 0;
+            no_of_pages = uint.Parse(str[4]);
+            
             try
             {
-                no_of_pages = uint.Parse(str[5]);
-            }
-            catch (FormatException)
-            {
-                //invalid numeric expression. we should concatenate index 4 & 5 into index 4 and delete index 5
-                //this is only valid if city/place consists of 2 words. If it consists of 3 words we have to make a check on 
-                //index 6. 
-                try
-                {
-                    no_of_pages = uint.Parse(str[6]);
-                }
-                catch (FormatException) 
-                {
-                    str[5] = string.Concat(str[5], " ", str[6]);
-                    str.Remove(str[6]);
-                }
-                str[4] = string.Concat(str[4], " ", str[5]);
-                str.Remove(str[5]);
-            }
-
-            try
-            {
-                packing_day = DateTime.ParseExact(str[1], "ddMMyy", cultureInfo);
+                packing_day = DateTime.ParseExact(str[0], "ddMMyy", cultureInfo);
             }
             catch (FormatException)
             {
                 try
                 {
-                    packing_day = DateTime.ParseExact(str[1], "ddMMyyyy", cultureInfo); //just try..maybe it will work.
+                    packing_day = DateTime.ParseExact(str[0], "ddMMyyyy", cultureInfo); //just try..maybe it will work.
                 }
                 catch (FormatException ex)
                 {
@@ -213,9 +155,8 @@ namespace WpfPrintFromImap
                 }
             }
             //at this point it should be safe to assume that we can parse index 5 of str
-            no_of_pages = uint.Parse(str[5]);
-            order_number = str[2] + " " + str[3];
-            searchValue = string.Concat("Pakkedag ", str[1]);
+            order_number = str[1] + " " + str[2];
+            searchValue = string.Concat("Pakkedag ", str[0]);
             mailBody = bde;
             attachmentName = attachName;
         }
