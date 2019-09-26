@@ -69,31 +69,7 @@ namespace WpfPrintFromImap
             return this.subject;
         }
         /// <summary>
-        /// splits a string that either starts with numerical values or starts with alphabetical values a-zA-Z
-        /// </summary>
-        /// <param name="value">string to split</param>
-        /// <param name="alpha">boolean telling if we should expect alpha first or numerical first</param>
-        /// <returns></returns>
-        public List<string> SplitString(string value, bool alpha)
-        {
-            List<string> T = new List<string>();
-            Regex re;
-            if (alpha)
-                re = new Regex(@"([a-zA-Z]+)(\d+)");
-            else
-                re = new Regex(@"(\d+)([a-zA-Z]+)");
-
-            Match result = re.Match(value);
-
-            T.Add(result.Groups[1].Value);
-            T.Add(result.Groups[2].Value);
-
-            return T;
-        }
-        /// <summary>
-        /// This function will try to filter out some of the most common variations of the subject, that has impact on the routine.
-        /// Problem arise if mail is forwarded or replied to and some senders adding messages in the subject-line. There's alot of variations,
-        /// so I'll just have to add them as they come.
+        /// Mainly uses Regex to remove "noise" from the string and getting to the string values that count. 
         /// </summary>
         /// <returns>Mail-subject in a List of strings</returns>
         public List<String> FilterSubject(String str)
@@ -114,7 +90,7 @@ namespace WpfPrintFromImap
             }
             index = str.IndexOf("ark");
             str = str.Remove(index);
-string pattern = @"(\d+)(\w+)(\d+)(\w+)(\d+)";
+            string pattern = @"(\d+)(\w+)(\d+)(\w+)(\d+)";
             Match result = Regex.Match(str, pattern);
 
             T.Add(result.Groups[1].Value); //date 
