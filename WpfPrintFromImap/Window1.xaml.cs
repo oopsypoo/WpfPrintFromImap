@@ -216,8 +216,8 @@ namespace WpfPrintFromImap
                            file.Close();
                        }
             */
-            if (lstBxPrinterPlain.SelectedItem.ToString() != null)
-                ((MainWindow)Application.Current.MainWindow).SetPrinterAdhessive(lstBxPrinterPlain.SelectedItem.ToString());
+            if (lstBxPrinterAdhesiveLabel.SelectedItem.ToString() != null)
+                ((MainWindow)Application.Current.MainWindow).SetPrinterAdhessive(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
         }
 
         private void BtnChangePlainA4Printer_Click(object sender, RoutedEventArgs e)
@@ -230,8 +230,8 @@ namespace WpfPrintFromImap
                            file.Close();
                        }
               */
-            if(lstBxPrinterAdhesiveLabel.SelectedItem.ToString() != null)
-                ((MainWindow)Application.Current.MainWindow).SetPrinterAdhessive(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
+            if(lstBxPrinterPlain.SelectedItem.ToString() != null)
+                ((MainWindow)Application.Current.MainWindow).SetPrinterPlain(lstBxPrinterPlain.SelectedItem.ToString());
         }
 
         private void CalPakkedag_SelectedDatesChanged(object sender, SelectionChangedEventArgs e)
