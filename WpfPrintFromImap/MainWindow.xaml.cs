@@ -90,7 +90,7 @@ namespace WpfPrintFromImap
             }
             index = str.IndexOf("ark");
             str = str.Remove(index);
-            string pattern = @"(\d+)(\w+)(\d+)(\w+)(\d+)";
+            string pattern = @"(\d+)([\p{L}]+)(\d+)([\p{L}]+)(\d+)";
             Match result = Regex.Match(str, pattern);
 
             T.Add(result.Groups[1].Value); //date 
@@ -148,13 +148,21 @@ namespace WpfPrintFromImap
         readonly private string imap_user;
         //3. password //should be encrypted somehow(not in clear text at least)
         readonly private string imap_user_password;
-        readonly string printer_adhesive;
-        readonly string printer_plain;
+        private string printer_adhesive;
+        private string printer_plain;
         public string packing_day;
         List<MailSnippet> mailSnippets;
         readonly private string att_dir;
         public SearchQuery query { get; private set; }
 
+        public void SetPrinterPlain(string prtr_plain)
+        {
+            this.printer_plain = prtr_plain;
+        }
+        public void SetPrinterAdhessive(string prtr_adhessive)
+        {
+            this.printer_plain = prtr_adhessive;
+        }
         public string GetFilename()
         {
             return MainWindow.fileSettings;

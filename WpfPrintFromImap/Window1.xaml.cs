@@ -208,28 +208,30 @@ namespace WpfPrintFromImap
 
         private void BtnChangeAdhesiveLabelPrinter_Click(object sender, RoutedEventArgs e)
         {
- /*           MessageBox.Show(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
-            if (MessageBox.Show("Do you want to append this to the file?", "Warning! Appending data to file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                StreamWriter file = new StreamWriter(filename, append: true);
-                file.WriteLine(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
-                file.Close();
-            }
- */
-
-    }
+            /*           MessageBox.Show(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
+                       if (MessageBox.Show("Do you want to append this to the file?", "Warning! Appending data to file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                       {
+                           StreamWriter file = new StreamWriter(filename, append: true);
+                           file.WriteLine(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
+                           file.Close();
+                       }
+            */
+            if (lstBxPrinterPlain.SelectedItem.ToString() != null)
+                ((MainWindow)Application.Current.MainWindow).SetPrinterAdhessive(lstBxPrinterPlain.SelectedItem.ToString());
+        }
 
         private void BtnChangePlainA4Printer_Click(object sender, RoutedEventArgs e)
         {
- /*           MessageBox.Show(lstBxPrinterPlain.SelectedItem.ToString());
-            if (MessageBox.Show("Do you want to append this to the file?", "Warning! Appending data to file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                StreamWriter file = new StreamWriter(filename, append: true);
-                file.WriteLine(lstBxPrinterPlain.SelectedItem.ToString());
-                file.Close();
-            }
-   */
-            
+            /*           MessageBox.Show(lstBxPrinterPlain.SelectedItem.ToString());
+                       if (MessageBox.Show("Do you want to append this to the file?", "Warning! Appending data to file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                       {
+                           StreamWriter file = new StreamWriter(filename, append: true);
+                           file.WriteLine(lstBxPrinterPlain.SelectedItem.ToString());
+                           file.Close();
+                       }
+              */
+            if(lstBxPrinterAdhesiveLabel.SelectedItem.ToString() != null)
+                ((MainWindow)Application.Current.MainWindow).SetPrinterAdhessive(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
         }
 
         private void CalPakkedag_SelectedDatesChanged(object sender, SelectionChangedEventArgs e)

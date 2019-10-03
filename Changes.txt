@@ -1,4 +1,11 @@
 ----------------
+-- 2019.10.03 --
+----------------
+1.	FilterSubject - RegEx is improved for capturing Norwegian letters using "switch" \p{L}
+2.	Change of printers was not updated. The member variables printer_plain and printer_adhessive is now updated when the "Change printer"-button is pressed, 
+	and saved to file when "Save&Exit"-button is pressed. 
+
+----------------
 -- 2019.09.24 --
 ----------------
 1.	FilterSubject is completely changed by using Regex functionality in C# .NET. See source for now.
