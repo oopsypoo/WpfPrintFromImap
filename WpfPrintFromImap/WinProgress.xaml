@@ -1,0 +1,14 @@
+﻿<Window x:Class="WpfPrintFromImap.WinProgress"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfPrintFromImap"
+        mc:Ignorable="d"
+        Title="Fetching Mails - Please wait" Height="128.571" Width="602.134">
+    <Grid>
+        <ProgressBar x:Name="ProgressBar" HorizontalAlignment="Left" Height="37" Margin="0,-1,0,0" VerticalAlignment="Top" Width="579" IsIndeterminate="True"/>
+        <TextBox x:Name="TextProgressInfo" HorizontalAlignment="Left" Height="29" Margin="0,41,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Text=" Fetching mails. Please wait...." Width="579"/>
+
+    </Grid>
+</Window>

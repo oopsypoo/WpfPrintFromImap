@@ -1,4 +1,17 @@
 ----------------
+-- 2019.10.21 --
+----------------
+Decided to add a progress-bar while connecting and fetching mail from the IMAP-server. Reason for this is that impatient users will 
+start to click all ver the place and think something ios wrong if the operation takes time.
+
+The progress-bar is opened in a new windows, and the connect an fetch operation is now in different functions/split up. The operation 
+OpenConnectMails(..) is tarted in a new thread/task so I had to rearrange a little bit. It's actually getting a little bit messy. I can
+see now that a lot of the solutions can be rearranged. But that's for another time. So there's a new source:
+ - WinProgress.xaml.cs 
+ - WinProgress.xaml
+
+
+----------------
 -- 2019.10.03 --
 ----------------
 1.	FilterSubject - RegEx is improved for capturing Norwegian letters using "switch" \p{L}

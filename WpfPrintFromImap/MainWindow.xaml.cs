@@ -26,6 +26,7 @@ namespace WpfPrintFromImap
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     /// 
+    
     class MailSnippet
     {
 
@@ -78,7 +79,7 @@ namespace WpfPrintFromImap
 
             int index = -1;
             str = str.ToLower();
-            var charsToRemove = new string[] { "-", " ", ",", "." };
+            var charsToRemove = new string[] { "-", " ", ",", ".","å", "ø", "æ" };
             foreach (var c in charsToRemove)
             {
                 str = str.Replace(c, string.Empty);
@@ -86,7 +87,7 @@ namespace WpfPrintFromImap
             index = str.IndexOf("pakkedag");
             if (index >= 0)
             {
-                str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
+                str = str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
             }
             index = str.IndexOf("ark");
             str = str.Remove(index);
@@ -151,8 +152,103 @@ namespace WpfPrintFromImap
         private string printer_adhesive;
         private string printer_plain;
         public string packing_day;
+        public string ProgressBarMessage = "";
         List<MailSnippet> mailSnippets;
         readonly private string att_dir;
+        //public string ProgressBarMessage;
+        public void PopulateListBox()
+        {
+            //if number of items is 0 then we can just add the list(if any)
+            //this will always be true since I remove everything in the listbox when the button is pushed
+            //easy/simple solution instead of comparing objects and lists.
+            if (this.lstBxMails.Items.Count == 0)
+            {
+                foreach (MailSnippet mailSubj in mailSnippets)
+                {
+                    lstBxMails.Items.Add(mailSubj.getSubject());
+                }
+            }
+        }
+        public void OpenConnectMails(WinProgress winProgress, Thread thread)
+        {
+            var client = new ImapClient();
+            
+            bool bFail = false;
+            // For demo-purposes, accept all SSL certificates
+            
+            try
+            {
+                client.ServerCertificateValidationCallback = (s, c, h, ex) => true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Caught an exception under ServerCertificateValidationCallback: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
+                bFail = true;
+            }
+
+            try
+            {
+                client.Connect(this.imap_server, 993, true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Caught an exception under Connect: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
+                bFail = true;
+            }
+            try
+            {
+                client.Authenticate(this.imap_user, this.imap_user_password);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Caught an exception under Authenticate: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
+                bFail = true;
+            }
+            if (bFail)//no reason to continue anymore
+                return;
+            // The Inbox folder is always available on all IMAP servers...
+            ProgressBarMessage = "Opening INBOX in Readonly mode.";
+            var inbox = client.Inbox;
+            inbox.Open(FolderAccess.ReadOnly);
+            string text = this.packing_day;
+            ProgressBarMessage = "Searching for mails containing: " + text;
+            var query = SearchQuery.SubjectContains(text);
+            //IList<UniqueId> T = new List<UniqueId>();
+            //temporary list that has to be compared with MainWindow-membervariable mailSnippets
+            //Connection to imap-server is good. Removeall in list and populate with new list
+            
+            List<MailSnippet> tempSnippets = new List<MailSnippet>();
+            var orderBy = new[] { OrderBy.Arrival };
+            foreach (var uid in inbox.Sort(query, orderBy))
+            {
+                var message = inbox.GetMessage(uid);
+                foreach (var attachment in message.Attachments)
+                {
+                    var fileName = attachment.ContentDisposition.FileName;
+                    MailSnippet ms = new MailSnippet(message.Subject, message.TextBody, fileName);
+                    tempSnippets.Add(ms);
+                    ProgressBarMessage = "Found mail: " + message.Subject;
+                    using (var stream = File.Create(this.att_dir + "\\" + fileName))
+                    {
+                        if (attachment is MessagePart)
+                        {
+                            var rfc822 = (MessagePart)attachment;
+
+                            rfc822.Message.WriteTo(stream);
+                        }
+                        else
+                        {
+                            var part = (MimePart)attachment;
+                            part.Content.DecodeTo(stream);
+                        }
+                    }
+                }
+            }
+            mailSnippets = tempSnippets;
+            
+            tempSnippets = null;
+            client.Disconnect(true);
+        }
         public SearchQuery query { get; private set; }
 
         public void SetPrinterPlain(string prtr_plain)
@@ -161,7 +257,7 @@ namespace WpfPrintFromImap
         }
         public void SetPrinterAdhessive(string prtr_adhessive)
         {
-            this.printer_plain = prtr_adhessive;
+            this.printer_adhesive = prtr_adhessive;
         }
         public string GetFilename()
         {
@@ -261,89 +357,10 @@ namespace WpfPrintFromImap
         //
         private void BtnUpdateMailList_Click(object sender, RoutedEventArgs e)
         {
-            var client = new ImapClient();
-            bool bFail = false;
-            // For demo-purposes, accept all SSL certificates
-            try
-            {
-                client.ServerCertificateValidationCallback = (s, c, h, ex) => true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Caught an exception under ServerCertificateValidationCallback: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
-                bFail = true;
-            }
-
-            try
-            {
-                client.Connect(this.imap_server, 993, true);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Caught an exception under Connect: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
-                bFail = true;
-            }
-            try
-            {
-                client.Authenticate(this.imap_user, this.imap_user_password);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Caught an exception under Authenticate: " + ex.Message, "Unhandled Exception Cought", MessageBoxButton.OK, MessageBoxImage.Error);
-                bFail = true;
-            }
-            if (bFail)//no reason to continue anymore
-                return;
-            // The Inbox folder is always available on all IMAP servers...
-            var inbox = client.Inbox;
-
-            inbox.Open(FolderAccess.ReadOnly);
-            string text = this.packing_day;
-           
-            var query = SearchQuery.SubjectContains(text);
-            //IList<UniqueId> T = new List<UniqueId>();
-            //temporary list that has to be compared with MainWindow-membervariable mailSnippets
-            //Connection to imap-server is good. Removeall in list and populate with new list
-            this.lstBxMails.Items.Clear();
-            List<MailSnippet> tempSnippets = new List<MailSnippet>();
-            var orderBy = new[] { OrderBy.Arrival };
-            foreach (var uid in inbox.Sort(query, orderBy))
-            {
-                var message = inbox.GetMessage(uid);
-                foreach (var attachment in message.Attachments)
-                {
-                    var fileName = attachment.ContentDisposition.FileName;
-                    MailSnippet ms = new MailSnippet(message.Subject, message.TextBody, fileName);
-                    tempSnippets.Add(ms);
-                    using (var stream = File.Create(this.att_dir + "\\" + fileName))
-                    {
-                        if (attachment is MessagePart)
-                        {
-                            var rfc822 = (MessagePart)attachment;
-
-                            rfc822.Message.WriteTo(stream);
-                        }
-                        else
-                        {
-                            var part = (MimePart)attachment;
-                            part.Content.DecodeTo(stream);
-                        }
-                    }
-                }
-            }
-            //if number of items is 0 then we can just add the list(if any)
-            //this will always be true since I remove everything in the listbox when the button is pushed
-            //easy/simple solution instead of comparing objects and lists.
-            if (this.lstBxMails.Items.Count == 0)
-            {
-                mailSnippets = tempSnippets;
-                foreach(MailSnippet mailSubj in mailSnippets)
-                {
-                    lstBxMails.Items.Add(mailSubj.getSubject());
-                }
-            }
-            tempSnippets = null;
-            client.Disconnect(true); 
+            lstBxMails.Items.Clear();
+            WinProgress winProgress = new WinProgress(this);
+            winProgress.Show();
+            PopulateListBox();
         }
 
         private void LstBxMails_SelectionChanged(object sender, RoutedEventArgs e)
@@ -355,29 +372,7 @@ namespace WpfPrintFromImap
                 this.txtMailBody.Text = mailSnippets[index].getMailBody();
             }
         }
-        //bad solution...Using GhostScript..We will try using "direct print" by sending th epdf directly to the queue
-/*
-        public void PrintPDF(string printer, string paperName, string filename, int copies)
-        {
-            using (GhostscriptProcessor processor = new GhostscriptProcessor())
-            {
-                List<string> switches = new List<string>();
-                switches.Add("-empty");
-                switches.Add("-dPrinted");
-                switches.Add("-dBATCH");
-                switches.Add("-dNOPAUSE");
-                switches.Add("-dNOSAFER");
-                switches.Add("-dNumCopies="+ copies.ToString());
-                switches.Add("-sDEVICE=mswinpr2");
-                switches.Add("-sOutputFile=%printer%" + printer);
-                switches.Add("-f");
-                switches.Add(filename);
-
-                processor.StartProcessing(switches.ToArray(), null);
-            }
-
-        }a
-  */
+   
         private void BtnPrint_Click(object sender, RoutedEventArgs e)
         {
             string current_path = Directory.GetCurrentDirectory();
