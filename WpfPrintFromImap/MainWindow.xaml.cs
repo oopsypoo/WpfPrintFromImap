@@ -159,9 +159,18 @@ namespace WpfPrintFromImap
         private string printer_plain;
         public string packing_day;
         public string ProgressBarMessage = "";
+        private WinProgress winProgress;
         List<MailSnippet> mailSnippets;
         readonly private string att_dir;
         //public string ProgressBarMessage;
+        private void UpdateProgressMessage(WinProgress wp, string msg)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                // Set property or change UI compomponents.  
+                wp.TextProgressInfo.Text = msg;
+            });
+        }
         public void PopulateListBox()
         {
             //if number of items is 0 then we can just add the list(if any)
@@ -175,7 +184,7 @@ namespace WpfPrintFromImap
                 }
             }
         }
-        public void OpenConnectMails(WinProgress winProgress, Thread thread)
+        public void OpenConnectMails(WinProgress wp)
         {
             var client = new ImapClient();
             
@@ -184,6 +193,7 @@ namespace WpfPrintFromImap
             
             try
             {
+                UpdateProgressMessage(wp, "ServerCertificateValidationCallback");
                 client.ServerCertificateValidationCallback = (s, c, h, ex) => true;
             }
             catch (Exception ex)
@@ -195,6 +205,7 @@ namespace WpfPrintFromImap
             try
             {
                 client.Connect(this.imap_server, 993, true);
+                UpdateProgressMessage(wp, "client.connect");
             }
             catch (Exception ex)
             {
@@ -204,6 +215,7 @@ namespace WpfPrintFromImap
             try
             {
                 client.Authenticate(this.imap_user, this.imap_user_password);
+                UpdateProgressMessage(wp, "Authenticating..");
             }
             catch (Exception ex)
             {
@@ -213,11 +225,16 @@ namespace WpfPrintFromImap
             if (bFail)//no reason to continue anymore
                 return;
             // The Inbox folder is always available on all IMAP servers...
-            ProgressBarMessage = "Opening INBOX in Readonly mode.";
+
+
+            UpdateProgressMessage(wp, "Opening INBOX in Readonly mode.");
+            
             var inbox = client.Inbox;
             inbox.Open(FolderAccess.ReadOnly);
             string text = this.packing_day;
             ProgressBarMessage = "Searching for mails containing: " + text;
+            UpdateProgressMessage(wp, ProgressBarMessage);
+            
             var query = SearchQuery.SubjectContains(text);
             //IList<UniqueId> T = new List<UniqueId>();
             //temporary list that has to be compared with MainWindow-membervariable mailSnippets
@@ -234,6 +251,7 @@ namespace WpfPrintFromImap
                     MailSnippet ms = new MailSnippet(message.Subject, message.TextBody, attachment.ContentDisposition.FileName);
                     tempSnippets.Add(ms);
                     ProgressBarMessage = "Found mail: " + message.Subject;
+                    UpdateProgressMessage(wp, ProgressBarMessage);
                     using (var stream = File.Create(this.att_dir + "\\" + ms.getAttachmentName()))//get atttachment name instead of filname..we might have changed the filename if it does not contain ".pdf"
                     {
                         if (attachment is MessagePart)
@@ -364,7 +382,7 @@ namespace WpfPrintFromImap
         private void BtnUpdateMailList_Click(object sender, RoutedEventArgs e)
         {
             lstBxMails.Items.Clear();
-            WinProgress winProgress = new WinProgress(this);
+            winProgress = new WinProgress(this);
             winProgress.Show();
             PopulateListBox();
         }

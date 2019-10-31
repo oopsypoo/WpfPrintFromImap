@@ -19,6 +19,8 @@ Latest "fix":
 
  -  Made the progress-bar-dialog-box "topmost", so that you cannot start pushing buttons or other controls before the "get mails action" is done/finished.
 
+ -  Added more messaging from main window to the progress-bar dialog-box just to inform the user that something is happening.
+
 ----------------
 -- 2019.10.21 --
 ----------------
