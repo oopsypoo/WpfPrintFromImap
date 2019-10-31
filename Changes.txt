@@ -1,4 +1,25 @@
 ----------------
+-- 2019.10.31 --
+----------------
+Latest "fix": 
+ -  Since "client/customer" does not have control of filename(we have to assume, since it's happened more than 5x), we have to make a check for filetype "pdf". 
+	If filename does not exist, add ".pdf" at the end of the filename before saving it locally and printing it.
+ -	Changed the UTF8 character-range for the Match-function. 
+	- ([\p{L}]+)" does not fit all characters that are sent. I'm not sure why. Maybe the sender is using a different character set, or windows is making a correct "guess".
+	  Ex. after analysing the bytes from the utf-8 character 'å'(latin small 'a' with circle above) we get that the character consists of the bytes(in decimal) 195 and 133. The client sent 3 bytes for the character 'å'
+	  65, 204 and 138. I assumed that this was a 3 byte version of the UTF-8 character 'å', but after making some calculations, this is not the case. But still windows characterized it as 'å'(latin small 'a' with circle above).
+	  One theory is that it's a swedish 'ä'(message sent from sweden) and the norwegian version of Windows 10 with norwegian culture-info automatically sets it 'å'.
+	- Went back to using a character range: original([\u0061-\u00f8]+) to ([\u0061-\u10f8]+). When testing this solved the problem with the 3 bytes(dec) 65, 204 and 138. It was just an "dumb" guess.
+	The point of it all was that I did not want the function to fail(Regex.Match(...)), so I that I had to give default values. At this point it works. 
+	But ofcourse...this is a weakness...that I do not know what the 3 bytes(dec) 65, 204 and 138 represent. What character-set is this is coming from...for now I'm going to live with it. 
+	No more time to think about it. But these lines noted here were my thoughts about it
+	Just as a small digression: I removed all norwegian letters defined like this 
+		- var charsToRemove = new string[] { "-", " ", ",", ".","å", "ø", "æ" };
+	...and still the function fails; because the three bytes (dec) 65, 204 and 138 are none of these...
+
+ -  Made the progress-bar-dialog-box "topmost", so that you cannot start pushing buttons or other controls before the "get mails action" is done/finished.
+
+----------------
 -- 2019.10.21 --
 ----------------
 Decided to add a progress-bar while connecting and fetching mail from the IMAP-server. Reason for this is that impatient users will 
@@ -56,7 +77,7 @@ see now that a lot of the solutions can be rearranged. But that's for another ti
 ----------------
 1.	Removed module Ghostscript.NET (using pdfium, don't need it)
 2.	RemoveNegative is renamed to FilterSubject
-3.	Added more functionality to FilterSubject - function. There are situations where sender adds messages after the standard subject. 
+3.	Added more functionality to FilterSubject - funcion. There are situations where sender adds messages after the standard subject. 
 	These messages has to be ignored
 
 ----------------
