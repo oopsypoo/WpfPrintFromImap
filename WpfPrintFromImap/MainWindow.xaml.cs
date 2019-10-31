@@ -91,7 +91,9 @@ namespace WpfPrintFromImap
             }
             index = str.IndexOf("ark");
             str = str.Remove(index);
-            string pattern = @"(\d+)([\p{L}]+)(\d+)([\p{L}]+)(\d+)";
+            //string pattern = @"(\d+)([\p{L}]+)(\d+)([\p{L}]+)(\d+)";
+            string pattern = @"(\d+)([\u0061-\u10f8]+)(\d+)([\u0061-\u10f8]+)(\d+)";
+
             Match result = Regex.Match(str, pattern);
 
             T.Add(result.Groups[1].Value); //date 
@@ -135,6 +137,10 @@ namespace WpfPrintFromImap
             order_number = str[1] + " " + str[2];
             searchValue = string.Concat("Pakkedag ", str[0]);
             mailBody = bde;
+            /// <summary>There's been alot of problems with attachments missing ".pdf" at the end of the string. We have to make a check and see if this is the case. If not add it.</summary>
+            /// 
+            if (!attachName.Contains(".pdf"))
+                attachName += ".pdf";
             attachmentName = attachName;
         }
     }
@@ -224,11 +230,11 @@ namespace WpfPrintFromImap
                 var message = inbox.GetMessage(uid);
                 foreach (var attachment in message.Attachments)
                 {
-                    var fileName = attachment.ContentDisposition.FileName;
-                    MailSnippet ms = new MailSnippet(message.Subject, message.TextBody, fileName);
+                    //var fileName = attachment.ContentDisposition.FileName;
+                    MailSnippet ms = new MailSnippet(message.Subject, message.TextBody, attachment.ContentDisposition.FileName);
                     tempSnippets.Add(ms);
                     ProgressBarMessage = "Found mail: " + message.Subject;
-                    using (var stream = File.Create(this.att_dir + "\\" + fileName))
+                    using (var stream = File.Create(this.att_dir + "\\" + ms.getAttachmentName()))//get atttachment name instead of filname..we might have changed the filename if it does not contain ".pdf"
                     {
                         if (attachment is MessagePart)
                         {
