@@ -1,0 +1,14 @@
+﻿<Window x:Name="winPrintProgress" x:Class="WpfPrintFromImap.PrintProgress"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfPrintFromImap"
+        mc:Ignorable="d"
+        Title="Progress of Printing" Height="123.15" Width="451.855">
+    <Grid>
+        <ProgressBar x:Name="printProgress" HorizontalAlignment="Left" Height="44" Margin="1,0,0,0" VerticalAlignment="Top" Width="433" SmallChange="1" Background="#FFACA963" BorderBrush="#FFA80D0D"/>
+        <TextBox x:Name="ppText" HorizontalAlignment="Left" Height="48" Margin="1,44,0,0" TextWrapping="Wrap" Text="Printing Mail. Please wait..." VerticalAlignment="Top" Width="433" FontSize="14"/>
+
+    </Grid>
+</Window>

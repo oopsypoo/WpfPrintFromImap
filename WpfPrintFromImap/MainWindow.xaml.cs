@@ -162,6 +162,7 @@ namespace WpfPrintFromImap
         private WinProgress winProgress;
         List<MailSnippet> mailSnippets;
         readonly private string att_dir;
+        
         //public string ProgressBarMessage;
         private void UpdateProgressMessage(WinProgress wp, string msg)
         {
@@ -194,7 +195,8 @@ namespace WpfPrintFromImap
             try
             {
                 UpdateProgressMessage(wp, "ServerCertificateValidationCallback");
-                client.ServerCertificateValidationCallback = (s, c, h, ex) => true;
+                
+                client.ServerCertificateValidationCallback = (s, cs, h, ex) => true;
             }
             catch (Exception ex)
             {
@@ -204,8 +206,9 @@ namespace WpfPrintFromImap
 
             try
             {
+                UpdateProgressMessage(wp, "Connecting to " + this.imap_server + " on port 993");
+                client.SslProtocols = System.Security.Authentication.SslProtocols.Default;
                 client.Connect(this.imap_server, 993, true);
-                UpdateProgressMessage(wp, "client.connect");
             }
             catch (Exception ex)
             {
@@ -214,8 +217,8 @@ namespace WpfPrintFromImap
             }
             try
             {
+                UpdateProgressMessage(wp, "Authenticating " + "\"" + this.imap_user + "\"");
                 client.Authenticate(this.imap_user, this.imap_user_password);
-                UpdateProgressMessage(wp, "Authenticating..");
             }
             catch (Exception ex)
             {
@@ -271,6 +274,7 @@ namespace WpfPrintFromImap
             mailSnippets = tempSnippets;
             
             tempSnippets = null;
+            UpdateProgressMessage(wp, "Disconnecting from the IMAP-server");
             client.Disconnect(true);
         }
         public SearchQuery query { get; private set; }
@@ -384,7 +388,8 @@ namespace WpfPrintFromImap
             lstBxMails.Items.Clear();
             winProgress = new WinProgress(this);
             winProgress.Show();
-            PopulateListBox();
+            //PopulateListBox(); //we can't do this here. a new window is opened and a new thread is started, so the number of entries will most likely be zero.
+            
         }
 
         private void LstBxMails_SelectionChanged(object sender, RoutedEventArgs e)
@@ -396,19 +401,22 @@ namespace WpfPrintFromImap
                 this.txtMailBody.Text = mailSnippets[index].getMailBody();
             }
         }
-   
-        private void BtnPrint_Click(object sender, RoutedEventArgs e)
+        public void SendToPrinter(PrintProgress pp)
         {
+            if (this.lstBxMails.Items.Count == 0)
+                return;
             string current_path = Directory.GetCurrentDirectory();
 
             string fullpath = current_path + "\\" + att_dir + "\\";
-            // string file = "test.pdf";
-
             foreach (MailSnippet ms in mailSnippets)
             {
                 string filename = fullpath + ms.getAttachmentName();
                 string txtFile = ms.getSubject() + ".txt";
-                
+                Dispatcher.Invoke(() =>
+                {
+                    pp.printProgress.Value += 1;
+                    pp.ppText.Text = "Sending to printer " + pp.printProgress.Value.ToString() + " of " + pp.printProgress.Maximum.ToString() + Environment.NewLine + ms.getAttachmentName();
+                });
                 PrintDocument pdt = new System.Drawing.Printing.PrintDocument();
                 pdt.DocumentName = ms.getSubject();
                 pdt.PrinterSettings.PrinterName = printer_plain;
@@ -438,9 +446,20 @@ namespace WpfPrintFromImap
                 Task pa = new Task(printAttachment, "stopAttachment");
                 pa.Start();
                 pa.Wait();
-                Thread.Sleep(2000);
+                Thread.Sleep(2500);
             }
-                 
+        }
+        private void BtnPrint_Click(object sender, RoutedEventArgs e)
+        {
+            PrintProgress pp = new PrintProgress(this);
+            try
+            {
+                pp.Show();
+            }
+            catch(Exception ex)
+            {
+
+            }
         }
         
         private void BtnRemoveMail_Click(object sender, RoutedEventArgs e)
