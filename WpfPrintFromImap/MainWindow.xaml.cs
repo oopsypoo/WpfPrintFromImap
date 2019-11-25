@@ -89,8 +89,9 @@ namespace WpfPrintFromImap
             {
                 str = str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
             }
-            index = str.IndexOf("ark");
-            str = str.Remove(index);
+            //index = str.IndexOf("ark"); //we cannot do this since there are places that contain the term "ark"
+            index = str.Length - 3;       //instead we can say that we know that "ark" is the last one,: find length of string, subtrace the number of characters in "ark"
+            str = str.Remove(index);    //remove last instance of ark.
             //string pattern = @"(\d+)([\p{L}]+)(\d+)([\p{L}]+)(\d+)";
             string pattern = @"(\d+)([\u0061-\u10f8]+)(\d+)([\u0061-\u10f8]+)(\d+)";
 
