@@ -89,20 +89,38 @@ namespace WpfPrintFromImap
             {
                 str = str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
             }
-            //index = str.IndexOf("ark"); //we cannot do this since there are places that contain the term "ark"
-            index = str.Length - 3;       //instead we can say that we know that "ark" is the last one,: find length of string, subtrace the number of characters in "ark"
+            index = str.IndexOf("ark");
+            int ind = -1;
+            if((ind = str.IndexOf("ark", index+3)) > 0)//look for a second occurence of "ark"
+                index = ind;
+            //index = str.Length - 3;       //instead we can say that we know that "ark" is the last one,: find length of string, subtrace the number of characters in "ark"
             str = str.Remove(index);    //remove last instance of ark.
             //string pattern = @"(\d+)([\p{L}]+)(\d+)([\p{L}]+)(\d+)";
+            //look for this string pattern: 'ddmmyy'"ordre"'order_number''order_city''no_of_copies'
+            //                        where 'ddmmy', 'order_number', 'order_city', and 'no_of_copies' are variable, while "ordre" is static.
             string pattern = @"(\d+)([\u0061-\u10f8]+)(\d+)([\u0061-\u10f8]+)(\d+)";
 
             Match result = Regex.Match(str, pattern);
-
-            T.Add(result.Groups[1].Value); //date 
-            T.Add(result.Groups[2].Value); //"ordre"
-            T.Add(result.Groups[3].Value); //ordernumber
-            T.Add(result.Groups[4].Value); //place
-            T.Add(result.Groups[5].Value); //number of copies
-
+            //string test = 
+            //if result is null, just a make a default
+            if (!result.Success)//if the preg ex-expression fails just make a dummy: the date is probabl not the problem: get todays date and some default shit up, we don't want to fail at all.
+            {
+                pattern = @"(\d+)";//get the date.
+                result = Regex.Match(str, pattern);
+                T.Add(result.Groups[1].Value);
+                T.Add("ordre"); //"ordre"
+                T.Add("9999999"); //ordernumber
+                T.Add("En eller annen plass: 10 copies"); //place
+                T.Add("10"); //number of copies
+            }
+            else
+            {
+                T.Add(result.Groups[1].Value); //date 
+                T.Add(result.Groups[2].Value); //"ordre"
+                T.Add(result.Groups[3].Value); //ordernumber
+                T.Add(result.Groups[4].Value); //place
+                T.Add(result.Groups[5].Value); //number of copies
+            }
             return T;
         }
         /// <summary>

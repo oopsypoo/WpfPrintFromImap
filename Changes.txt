@@ -1,4 +1,11 @@
 ----------------
+-- 2019.11.25 --
+----------------
+ Fixed a BUG:
+	-	Occures when a string(place) in the subject contains "ark". In other words when there are more than one occurrance of "ark". It returns the first occurance and the Match-function fails.
+		FIX: Just look for a second occurence of "ark". I don't think it's neccesary to look for any more. Time will see.
+
+----------------
 -- 2019.10.31 --
 ----------------
 Latest "fix": 
