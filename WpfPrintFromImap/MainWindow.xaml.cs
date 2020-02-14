@@ -18,7 +18,8 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Text.RegularExpressions;
-
+using System.Xml.Serialization;
+using CredentialManagement;
 
 namespace WpfPrintFromImap
 {
@@ -163,26 +164,106 @@ namespace WpfPrintFromImap
             attachmentName = attachName;
         }
     }
+
+    /// <summary>
+    ///Create the Appconfig xml-class for reading aand writing configuration. 
+    ///Much better than just writing to an open file with no structure...
+    /// </summary>    
+    [XmlRoot("AppConfig")]
+    public class AppConfig
+    {
+        [XmlElement("MailServer")]
+        public string MailServer { get; set; }
+        [XmlElement("Login")]
+        public string Login { get; set; }
+        [XmlElement("StandardPrinter")]
+        public string StandardPrinter { get; set; }
+        [XmlElement("AdhessivePrinter")]
+        public string AdhessivePrinter { get; set; }
+        [XmlElement("PackingDay")]
+        public string PackingDay { get; set; }
+        
+        public const string SettingsFile = "settings.xml";
+
+        /// <summary>
+        /// //////////////////////////////////////////////////////////////////////////////
+        /// </summary>
+        /// <returns></returns>
+        //I'm missing something here...I  see it...it's reading correctly but it's not assigning the object like I'm thinking...wake up and fix it tomorrow
+        ///////////////////////////////////////////////////////////////////////
+        public static AppConfig DeserializeAppConfig(string file)
+        {
+            try
+            {
+                var stream = System.IO.File.OpenRead(file);
+                var serializer = new XmlSerializer(typeof(AppConfig));
+                return serializer.Deserialize(stream) as AppConfig;
+            }
+            catch (FileNotFoundException fnfe)
+            {
+                MessageBox.Show("Settingsfile does not exist. \nPlease enter all settings in the settings dialog-box+n" + fnfe.Message, "Missing Setttings", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            }
+            return null;
+        }
+        public void SerializeAppConfig()
+        {
+            using (var writer = new System.IO.StreamWriter(AppConfig.SettingsFile))
+            {
+                var serializer = new XmlSerializer(this.GetType());
+                serializer.Serialize(writer, this);
+                writer.Flush();
+            }
+        }
+
+    }
+    public static class CredentialUtil
+    {
+
+        public static string GetCredentials(string target)
+        {
+            var cm = new Credential { Target = target };
+            if (!cm.Load()) //could not get credentials of target
+            {
+                return null;
+            }
+            else
+            {
+                return cm.Password;
+            }
+        }
+
+        public static bool SetCredentials(
+             string target, string username, string password, PersistanceType persistenceType)
+        {
+            return new Credential
+            {
+                Target = target,
+                Username = username,
+                Password = password,
+                PersistanceType = persistenceType
+            }.Save();
+        }
+
+        public static bool RemoveCredentials(string target)
+        {
+            return new Credential { Target = target }.Delete();
+        }
+    }
     public partial class MainWindow : Window
     {
-        //private string
-        private const string fileSettings = "settings.cfg";
-        //data in file is in the same order as in the settigs dialogbox
-        //1. imap-server
-        readonly private string imap_server;
-        //2. username
-        readonly private string imap_user;
-        //3. password //should be encrypted somehow(not in clear text at least)
-        readonly private string imap_user_password;
-        private string printer_adhesive;
-        private string printer_plain;
+        //create an instance of this class. It will be initialized in constructor
+        public AppConfig ac;
+        //private stringa
         public string packing_day;
         public string ProgressBarMessage = "";
         private WinProgress winProgress;
         List<MailSnippet> mailSnippets;
         readonly private string att_dir;
-        
-        //public string ProgressBarMessage;
+        readonly String CredentialName = typeof(MainWindow).Namespace;
+        public String GetCredentialName()
+        {
+            return this.CredentialName;
+        }
         private void UpdateProgressMessage(WinProgress wp, string msg)
         {
             Dispatcher.Invoke(() =>
@@ -225,9 +306,9 @@ namespace WpfPrintFromImap
 
             try
             {
-                UpdateProgressMessage(wp, "Connecting to " + this.imap_server + " on port 993");
+                UpdateProgressMessage(wp, "Connecting to " + ac.MailServer + " on port 993");
                 client.SslProtocols = System.Security.Authentication.SslProtocols.Default;
-                client.Connect(this.imap_server, 993, true);
+                client.Connect(ac.MailServer, 993, true);
             }
             catch (Exception ex)
             {
@@ -236,8 +317,9 @@ namespace WpfPrintFromImap
             }
             try
             {
-                UpdateProgressMessage(wp, "Authenticating " + "\"" + this.imap_user + "\"");
-                client.Authenticate(this.imap_user, this.imap_user_password);
+                
+                UpdateProgressMessage(wp, "Authenticating " + "\"" + ac.Login + "\"");
+                client.Authenticate(ac.Login, CredentialUtil.GetCredentials(this.GetCredentialName()));
             }
             catch (Exception ex)
             {
@@ -253,7 +335,7 @@ namespace WpfPrintFromImap
             
             var inbox = client.Inbox;
             inbox.Open(FolderAccess.ReadOnly);
-            string text = this.packing_day;
+            string text = ac.PackingDay;
             ProgressBarMessage = "Searching for mails containing: " + text;
             UpdateProgressMessage(wp, ProgressBarMessage);
             
@@ -295,20 +377,23 @@ namespace WpfPrintFromImap
             tempSnippets = null;
             UpdateProgressMessage(wp, "Disconnecting from the IMAP-server");
             client.Disconnect(true);
+            client.Dispose();
         }
         public SearchQuery query { get; private set; }
 
         public void SetPrinterPlain(string prtr_plain)
         {
-            this.printer_plain = prtr_plain;
+            if(ac != null)
+                ac.StandardPrinter = prtr_plain;
         }
         public void SetPrinterAdhessive(string prtr_adhessive)
         {
-            this.printer_adhesive = prtr_adhessive;
+            if(ac != null)
+                ac.AdhessivePrinter = prtr_adhessive;
         }
         public string GetFilename()
         {
-            return MainWindow.fileSettings;
+            return AppConfig.SettingsFile;
         }
         public string getAttachmentDirectory()
         {
@@ -317,47 +402,18 @@ namespace WpfPrintFromImap
         public MainWindow()
         {
             InitializeComponent();
-            if(!File.Exists(GetFilename()))
-            {
-                MessageBox.Show("You must create a Settingsfile before continuing. Go to \"Settings\" and fill in the form.", "Settings are missing", MessageBoxButton.OK, MessageBoxImage.Hand);
-            }
-            else
-            {
-                try
-                {
-                    StreamReader file = new StreamReader(GetFilename());
-                    this.imap_server = file.ReadLine();
-                    this.imap_user = file.ReadLine();
-                    string line = file.ReadLine();
-                    if (line != null) //try to do this ..bla bla bla
-                    {
-                        var pswd = System.Convert.FromBase64String(line);
-                        this.imap_user_password = System.Text.Encoding.UTF8.GetString(pswd);
-                    }
-                    this.printer_adhesive = file.ReadLine();
-                    this.printer_plain = file.ReadLine();
-                    this.packing_day = file.ReadLine();
-                    this.txtPackingDay.Text += this.packing_day;
-                    file.Close();
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show("Unhandled exceptions in reading settings-file: {0}", e.ToString(), MessageBoxButton.OK, MessageBoxImage.Error );
-                    //the file exists, but is corrupted somehow. Delete it.
-                    if(File.Exists(GetFilename()))
-                    {//delete the file and let's try again.
-                        
-                        File.Delete(GetFilename());
-                    }
-                }
-
-            }
+            //just make a check ti see if the the settingsfile exists..if not tell the user that it needs to be created
+            ac = new AppConfig();
+            ac = AppConfig.DeserializeAppConfig(AppConfig.SettingsFile);
+            if (ac == null)
+                MessageBox.Show("DeserializeAppConfig returned null");
+            if(ac != null)
+                txtPackingDay.Text += ac.PackingDay;
+            //else the file is ok..do not need to do anything
             att_dir = "Attachments";
             Directory.CreateDirectory(att_dir);
             mailSnippets = new List<MailSnippet>();
         }
-
-       
 
         public void mailSnippets_RemoveAll()
         {
@@ -438,13 +494,15 @@ namespace WpfPrintFromImap
                 });
                 PrintDocument pdt = new System.Drawing.Printing.PrintDocument();
                 pdt.DocumentName = ms.getSubject();
-                pdt.PrinterSettings.PrinterName = printer_plain;
+                pdt.PrinterSettings.PrinterName = ac.StandardPrinter;
                 pdt.PrinterSettings.Copies = 1;
                 pdt.PrintPage += delegate (object sender1, PrintPageEventArgs e1)
                 {
                     e1.Graphics.DrawString(ms.getMailBody(), new Font("Times New Roman", 20), new SolidBrush(Color.Black), new RectangleF(0, 0, pdt.DefaultPageSettings.PrintableArea.Width, pdt.DefaultPageSettings.PrintableArea.Height));
                 };
                 pdt.Print();
+                
+                
                 Action<object> printAttachment = (object obj) =>
                 {
                     using (var document = PdfDocument.Load(filename))
@@ -452,19 +510,41 @@ namespace WpfPrintFromImap
                         using (var printDocument = document.CreatePrintDocument())
                         {
                             printDocument.PrinterSettings.PrintFileName = filename;
-                            printDocument.PrinterSettings.PrinterName = printer_adhesive;
+                            printDocument.PrinterSettings.PrinterName = ac.AdhessivePrinter;
                             printDocument.DocumentName = filename;
                             printDocument.PrinterSettings.PrintFileName = filename;
                             printDocument.PrinterSettings.Copies = (short)ms.getNoOfPages();
                             printDocument.PrintController = new System.Drawing.Printing.StandardPrintController();
+                            
                             printDocument.Print();
+                            
 
                         }
                     }
                 };
-                Task pa = new Task(printAttachment, "stopAttachment");
-                pa.Start();
-                pa.Wait();
+               // MessageBox.Show(printer_adhesive);
+        /*        PrintServer myPrintServer = new PrintServer(System.Printing.PrintSystemDesiredAccess.EnumerateServer);
+                PrintQueue pq = new PrintQueue(myPrintServer, printer_adhesive);
+
+                //pq.Refresh();
+                PrintJobInfoCollection jobs = pq.GetPrintJobInfoCollection();
+                foreach (PrintSystemJobInfo job in jobs)
+                {
+                    // Since the user may not be able to articulate which job is problematic,
+                    // present information about each job the user has submitted.
+                    MessageBox.Show("\n\t\tJob: " + job.JobName + " ID: " + job.JobIdentifier);
+                    if (job.IsCompleted)
+                        MessageBox.Show("It's completed");
+                    else if (job.IsPrinted)
+                        MessageBox.Show("It's printed");
+                    else
+                        MessageBox.Show("Some other property");
+                }// end for each print job    
+                */
+                 /*           Task pa = new Task(printAttachment, "stopAttachment");
+                            pa.Start();
+                            pa.Wait();
+                   */
                 Thread.Sleep(2500);
             }
         }

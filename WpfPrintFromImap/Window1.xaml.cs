@@ -18,6 +18,8 @@ using MimeKit;
 using System.IO;
 using Microsoft.Win32;
 using System.Drawing;
+using CredentialManagement;
+
 
 namespace WpfPrintFromImap
 {
@@ -29,7 +31,6 @@ namespace WpfPrintFromImap
     /// </summary>
     public partial class Window1 : Window
     {
-        const string filename = "settings.cfg";
         //this is the packingday var that will be saved to file...easier this way
         string packingday;
         bool date_changed = false;
@@ -50,7 +51,7 @@ namespace WpfPrintFromImap
                 // For demo-purposes, accept all SSL certificates
                 try
                 {
-                    client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+                    client.ServerCertificateValidationCallback = (s, c, h, ex) => true;
                 }
                 catch (Exception e)
                 {
@@ -61,6 +62,7 @@ namespace WpfPrintFromImap
                 try
                 {
                     string imap_server = this.txtBxImapServer.Text;
+                    client.SslProtocols = System.Security.Authentication.SslProtocols.Default;
                     client.Connect(imap_server, 993, true);
                 }
                 catch (Exception ex)
@@ -82,9 +84,8 @@ namespace WpfPrintFromImap
                 try
                 {
                     string username = this.txtBxUserName.Text;
-                    string password = this.txtBxPassword.Password;
-                    client.Authenticate(username, password);
-                    password = null;
+                    
+                    client.Authenticate(username, CredentialUtil.GetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName()));
                 }
                 catch (Exception e)
                 {
@@ -92,49 +93,51 @@ namespace WpfPrintFromImap
                     return false;
                 }
                 client.Disconnect(true);
+                
                 return true;
             }
         }
 
         public Window1()
         {
+            
             InitializeComponent();
+
+            this.GetAvailablePrinters();
             bool bFileCorrupted = false;
-            if (File.Exists(filename))
+            if (File.Exists(AppConfig.SettingsFile))
             {
-                StreamReader file = new StreamReader(filename);
-                this.txtBxImapServer.Text = file.ReadLine();
+                AppConfig appConfig = ((MainWindow)Application.Current.MainWindow).ac;
+                this.txtBxImapServer.Text = appConfig.MailServer;
                 if (this.txtBxImapServer.Text == null)
                     bFileCorrupted = true;
-                this.txtBxUserName.Text = file.ReadLine();
+                this.txtBxUserName.Text = appConfig.Login;
                 if (this.txtBxUserName.Text == null)
                     bFileCorrupted = true;
-                string line = file.ReadLine();
-                if (line != null)
-                {
-                    var pswd = System.Convert.FromBase64String(line);
-                    this.txtBxPassword.Password = System.Text.Encoding.UTF8.GetString(pswd);
-                }
-                else
-                    bFileCorrupted = true;
-                this.GetAvailablePrinters();
-                this.lstBxPrinterAdhesiveLabel.SelectedValue = file.ReadLine();
+
+
+                /* do something abvout this...not good
+                 * 
+                 */
+                //Get from vault
+                //this.txtBxPassword.Password = System.Text.Encoding.UTF8.GetString(pswd);
+                //fix this...not returning the credentials
+                this.txtBxPassword.Password = CredentialUtil.GetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName());
+                
+                this.lstBxPrinterAdhesiveLabel.SelectedValue = appConfig.AdhessivePrinter;
 /*                if (this.lstBxPrinterAdhesiveLabel.SelectedValue == null)
                     bFileCorrupted = true;
- */               this.lstBxPrinterPlain.SelectedValue = file.ReadLine();
+ */               this.lstBxPrinterPlain.SelectedValue = appConfig.StandardPrinter;
 /*                if (this.lstBxPrinterPlain.SelectedValue == null)
                     bFileCorrupted = true;
-  */              this.packingday = file.ReadLine();
+  */              this.packingday = appConfig.PackingDay;
                 if (this.packingday == null)
                     bFileCorrupted = true;
                 this.txtBxMailFilterSubject.Text = packingday;
                 if (bFileCorrupted)
                 {
-                    MessageBox.Show("Settingsfile is corrupted...deleting. Please set up your settings again and save it.", "File-corruption", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    file.Close();
-                    File.Delete(filename);
+                    MessageBox.Show("Please try to set up Credentials again..", "File-corruption", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
-                file.Close();
             }
 
             if(string.IsNullOrEmpty(packingday))
@@ -147,6 +150,10 @@ namespace WpfPrintFromImap
         //close current window and save data if it allready has not been done
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            if (((MainWindow)Application.Current.MainWindow).ac == null)
+                ((MainWindow)Application.Current.MainWindow).ac = new AppConfig();
+            AppConfig appConfig = ((MainWindow)Application.Current.MainWindow).ac;
+            
             bool bError = false;
             //Save data to file from text-boxes and save data to file
             if (txtBxImapServer.Text == null)
@@ -165,26 +172,17 @@ namespace WpfPrintFromImap
                 bError = true;
             }
             //if there are no errors save data and close dialog
+            appConfig.Login = txtBxUserName.Text;
+            appConfig.MailServer = txtBxImapServer.Text;
+            appConfig.StandardPrinter = lstBxPrinterPlain.SelectedItem.ToString();
+            appConfig.AdhessivePrinter = lstBxPrinterAdhesiveLabel.SelectedItem.ToString();
+            appConfig.PackingDay = this.packingday;
+
+            appConfig.SerializeAppConfig();
             if (!bError)
             {
-                StreamWriter file = new StreamWriter(filename);
-                file.WriteLine(this.txtBxImapServer.Text);
-                file.WriteLine(this.txtBxUserName.Text);
-                //just convert to base64 for now..."not clear"
-                var text = System.Text.Encoding.UTF8.GetBytes(this.txtBxPassword.Password);
-                file.WriteLine(Convert.ToBase64String(text));
-                if (lstBxPrinterAdhesiveLabel.SelectedItem == null)
-                    file.WriteLine((char)0x00);
-                else
-                    file.WriteLine(lstBxPrinterAdhesiveLabel.SelectedItem.ToString());
-                if (lstBxPrinterPlain.SelectedItem == null)
-                    file.WriteLine((char)0x00);
-                else
-                    file.WriteLine(lstBxPrinterPlain.SelectedItem.ToString());
-                file.WriteLine(this.packingday);
-                file.Close();
-                //if date has changed we can remove elements from the listbox in the main window
-                //and delete whatever is in it
+                CredentialUtil.SetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName(), null, txtBxPassword.Password, PersistanceType.LocalComputer);
+                
                 if (this.date_changed)
                 {
                     var mw = ((MainWindow)Application.Current.MainWindow);
@@ -192,7 +190,7 @@ namespace WpfPrintFromImap
                     mw.mailSnippets_RemoveAll();
                     mw.txtPackingDay.Text = "Gjeldende: " + packingday;
                 }
-                //clsoe window
+                //close window
                 this.Close();
             }
         }
@@ -252,7 +250,7 @@ namespace WpfPrintFromImap
         private void IMAP_Settings_Closed(object sender, EventArgs e)
         {
             if(this.packingday != null)
-                ((MainWindow)Application.Current.MainWindow).packing_day = this.packingday;
+                ((MainWindow)Application.Current.MainWindow).ac.PackingDay = this.packingday;
         }
     }
 }
