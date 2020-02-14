@@ -6,11 +6,11 @@ Two major differences:
 2.	Saving of application-data.
 
 1.	I'm now using a Credential-manager to store the password(MS-password-vault??). So I added the NuGet-package CredentialManagement, which is also the namespace that has to be added. I feel better using this method than the past method.
-	It's not "SAFE", but it's "safer"...things can always be done "safer", but this is the best solution for now without making this a ridiculously big project. Enough said...
+	It's not "SAFE", but it's "safer"...things can always be done "safer", but this is the best solution for now without making this a ridiculously big project. Things are "Disposable", and that's what I've made sure to do...Enough said...
 	- see "public static class CredentialUtil"
 
-2.	Instead of saving data in a "flat" file, I'm saving the data in a xml-file which is serialized and deserialized to save data. I like this method, and I like building the class the way c# does it. I't easy and pretty 
-	straight forward.
+2.	Instead of saving data in a "flat" file, I'm saving the data in a xml-file which is serialized and deserialized to save and get data. I like this method, and I like building the class the way c# does it. It's easy and pretty 
+	straight forward, and there's room for developement, which can be said about (1) too.
 	- see "public class AppConfig".
 
 
