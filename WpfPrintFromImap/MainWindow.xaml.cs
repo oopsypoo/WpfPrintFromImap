@@ -41,35 +41,14 @@ namespace WpfPrintFromImap
         readonly private string attachmentName;
         readonly private string mailBody;
         readonly private string subject;
-        
-        public string getSearchValue()
-        {
-            return this.searchValue;
-        }
-        public DateTime getPackingDay()
-        {
-            return this.packing_day;
-        }
-        public uint getNoOfPages()
-        {
-            return this.no_of_pages;
-        }
-        public string getOrderNumber()
-        {
-            return this.order_number;
-        }
-        public string getAttachmentName()
-        {
-            return this.attachmentName;
-        }
-        public string getMailBody()
-        {
-            return this.mailBody;
-        }
-        public string getSubject()
-        {
-            return this.subject;
-        }
+
+        public string SearchValue => this.searchValue;
+        public DateTime PackingDay => this.packing_day;
+        public uint NoOfPages => this.no_of_pages;
+        public string OrderNumber => this.order_number;
+        public string AttachmentName => this.attachmentName;
+        public string MailBody => this.mailBody;
+        public string Subject => this.subject;
         /// <summary>
         /// Mainly uses Regex to remove "noise" from the string and getting to the string values that count. 
         /// </summary>
@@ -77,22 +56,20 @@ namespace WpfPrintFromImap
         public List<String> FilterSubject(String str)
         {
             List<String> T = new List<String>();
-
-            int index = -1;
             str = str.ToLower();
             var charsToRemove = new string[] { "-", " ", ",", ".","å", "ø", "æ" };
             foreach (var c in charsToRemove)
             {
                 str = str.Replace(c, string.Empty);
             }
-            index = str.IndexOf("pakkedag");
+            int index = str.IndexOf("pakkedag");
             if (index >= 0)
             {
                 str = str.Remove(0, index + "pakkedag".Length);//remove anything before "pakkedag" and "pakkedag"
             }
             index = str.IndexOf("ark");
-            int ind = -1;
-            if((ind = str.IndexOf("ark", index+3)) > 0)//look for a second occurence of "ark"
+            int ind;
+            if ((ind = str.IndexOf("ark", index+3)) > 0)//look for a second occurence of "ark"
                 index = ind;
             //index = str.Length - 3;       //instead we can say that we know that "ark" is the last one,: find length of string, subtrace the number of characters in "ark"
             str = str.Remove(index);    //remove last instance of ark.
@@ -216,37 +193,59 @@ namespace WpfPrintFromImap
         }
 
     }
-    public static class CredentialUtil
+    public class CredentialUtil : IDisposable
     {
-
-        public static string GetCredentials(string target)
+        private readonly Credential credentials;
+        public string GetPass()
         {
-            var cm = new Credential { Target = target };
-            if (!cm.Load()) //could not get credentials of target
+            return credentials.Password;
+        }
+        public bool SetCredentials(string target, string username, string password, PersistanceType persistenceType)
+        {
+            credentials.Target = target;
+            credentials.Username = username;
+            credentials.Password = password;
+            credentials.Target = target;
+            credentials.PersistanceType = persistenceType;
+            if (!credentials.Save())
             {
-                return null;
+                MessageBox.Show("Could not save credentials", "CredentialUtil", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
             else
+                return true;
+        }
+        /// <summary>
+        /// Not used. For now. Maybe the application should have a button where we can delete. But this can be deleted locally/manually
+        /// since it's a local computer credential
+        /// </summary>
+        /// <returns></returns>
+        private bool RemoveCredentials()
+        {
+            if (!this.credentials.Delete())
             {
-                return cm.Password;
+                MessageBox.Show("Could not delete credential", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            else
+                return true;
+        }
+        public CredentialUtil()
+        {
+            credentials = new Credential { Target = "WpfPrintFromImap" };
+            //credentials = new Credential { Target = ((MainWindow)Application.Current.MainWindow).GetCredentialName() };
+            if (!credentials.Load())
+            {
+                MessageBox.Show("CredentialName does not exist", "CredentialUtility", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        public static bool SetCredentials(
-             string target, string username, string password, PersistanceType persistenceType)
+        public void Dispose()
         {
-            return new Credential
-            {
-                Target = target,
-                Username = username,
-                Password = password,
-                PersistanceType = persistenceType
-            }.Save();
+            credentials.Dispose();
         }
-
-        public static bool RemoveCredentials(string target)
+        ~CredentialUtil()
         {
-            return new Credential { Target = target }.Delete();
+            this.Dispose();
         }
     }
     public partial class MainWindow : Window
@@ -281,13 +280,13 @@ namespace WpfPrintFromImap
             {
                 foreach (MailSnippet mailSubj in mailSnippets)
                 {
-                    lstBxMails.Items.Add(mailSubj.getSubject());
+                    lstBxMails.Items.Add(mailSubj.Subject);
                 }
             }
         }
         public void OpenConnectMails(WinProgress wp)
         {
-            var client = new ImapClient();
+            ImapClient client = new ImapClient();
             
             bool bFail = false;
             // For demo-purposes, accept all SSL certificates
@@ -319,7 +318,9 @@ namespace WpfPrintFromImap
             {
                 
                 UpdateProgressMessage(wp, "Authenticating " + "\"" + ac.Login + "\"");
-                client.Authenticate(ac.Login, CredentialUtil.GetCredentials(this.GetCredentialName()));
+                var cu = new CredentialUtil();
+                client.Authenticate(ac.Login, cu.GetPass());
+                cu.Dispose();
             }
             catch (Exception ex)
             {
@@ -327,7 +328,10 @@ namespace WpfPrintFromImap
                 bFail = true;
             }
             if (bFail)//no reason to continue anymore
+            {
+                client.Dispose();
                 return;
+            }
             // The Inbox folder is always available on all IMAP servers...
 
 
@@ -356,12 +360,10 @@ namespace WpfPrintFromImap
                     tempSnippets.Add(ms);
                     ProgressBarMessage = "Found mail: " + message.Subject;
                     UpdateProgressMessage(wp, ProgressBarMessage);
-                    using (var stream = File.Create(this.att_dir + "\\" + ms.getAttachmentName()))//get atttachment name instead of filname..we might have changed the filename if it does not contain ".pdf"
+                    using (var stream = File.Create(this.att_dir + "\\" + ms.AttachmentName))//get atttachment name instead of filname..we might have changed the filename if it does not contain ".pdf"
                     {
-                        if (attachment is MessagePart)
+                        if (attachment is MessagePart rfc822)
                         {
-                            var rfc822 = (MessagePart)attachment;
-
                             rfc822.Message.WriteTo(stream);
                         }
                         else
@@ -379,7 +381,7 @@ namespace WpfPrintFromImap
             client.Disconnect(true);
             client.Dispose();
         }
-        public SearchQuery query { get; private set; }
+        public SearchQuery SQuery { get; private set; }
 
         public void SetPrinterPlain(string prtr_plain)
         {
@@ -395,10 +397,7 @@ namespace WpfPrintFromImap
         {
             return AppConfig.SettingsFile;
         }
-        public string getAttachmentDirectory()
-        {
-            return this.att_dir;
-        }
+        public string AttachmentDirectory => this.att_dir;
         public MainWindow()
         {
             InitializeComponent();
@@ -415,7 +414,7 @@ namespace WpfPrintFromImap
             mailSnippets = new List<MailSnippet>();
         }
 
-        public void mailSnippets_RemoveAll()
+        public void MailSnippets_RemoveAll()
         {
             if(mailSnippets.Count > 0)
             {
@@ -443,8 +442,10 @@ namespace WpfPrintFromImap
         {
             try
             {
-                Window1 winTest = new Window1();
-                winTest.Owner = this;
+                Window1 winTest = new Window1
+                {
+                    Owner = this
+                };
                 winTest.Show();
                 
             }
@@ -472,8 +473,8 @@ namespace WpfPrintFromImap
             var index = this.lstBxMails.SelectedIndex;
             if (index >= 0)
             {
-                this.txtBxAttachment.Text = mailSnippets[index].getAttachmentName();
-                this.txtMailBody.Text = mailSnippets[index].getMailBody();
+                this.txtBxAttachment.Text = mailSnippets[index].AttachmentName;
+                this.txtMailBody.Text = mailSnippets[index].MailBody;
             }
         }
         public void SendToPrinter(PrintProgress pp)
@@ -485,23 +486,25 @@ namespace WpfPrintFromImap
             string fullpath = current_path + "\\" + att_dir + "\\";
             foreach (MailSnippet ms in mailSnippets)
             {
-                string filename = fullpath + ms.getAttachmentName();
-                string txtFile = ms.getSubject() + ".txt";
+                string filename = fullpath + ms.AttachmentName;
+                string txtFile = ms.Subject + ".txt";
                 Dispatcher.Invoke(() =>
                 {
                     pp.printProgress.Value += 1;
-                    pp.ppText.Text = "Sending to printer " + pp.printProgress.Value.ToString() + " of " + pp.printProgress.Maximum.ToString() + Environment.NewLine + ms.getAttachmentName();
+                    pp.ppText.Text = "Sending to printer " + pp.printProgress.Value.ToString() + " of " + pp.printProgress.Maximum.ToString() + Environment.NewLine + ms.AttachmentName;
                 });
-                PrintDocument pdt = new System.Drawing.Printing.PrintDocument();
-                pdt.DocumentName = ms.getSubject();
+                PrintDocument pdt = new System.Drawing.Printing.PrintDocument
+                {
+                    DocumentName = ms.Subject
+                };
                 pdt.PrinterSettings.PrinterName = ac.StandardPrinter;
                 pdt.PrinterSettings.Copies = 1;
                 pdt.PrintPage += delegate (object sender1, PrintPageEventArgs e1)
                 {
-                    e1.Graphics.DrawString(ms.getMailBody(), new Font("Times New Roman", 20), new SolidBrush(Color.Black), new RectangleF(0, 0, pdt.DefaultPageSettings.PrintableArea.Width, pdt.DefaultPageSettings.PrintableArea.Height));
+                    e1.Graphics.DrawString(ms.MailBody, new Font("Times New Roman", 20), new SolidBrush(Color.Black), new RectangleF(0, 0, pdt.DefaultPageSettings.PrintableArea.Width, pdt.DefaultPageSettings.PrintableArea.Height));
                 };
                 pdt.Print();
-                
+                pdt.Dispose();
                 
                 Action<object> printAttachment = (object obj) =>
                 {
@@ -513,12 +516,10 @@ namespace WpfPrintFromImap
                             printDocument.PrinterSettings.PrinterName = ac.AdhessivePrinter;
                             printDocument.DocumentName = filename;
                             printDocument.PrinterSettings.PrintFileName = filename;
-                            printDocument.PrinterSettings.Copies = (short)ms.getNoOfPages();
+                            printDocument.PrinterSettings.Copies = (short)ms.NoOfPages;
                             printDocument.PrintController = new System.Drawing.Printing.StandardPrintController();
                             
                             printDocument.Print();
-                            
-
                         }
                     }
                 };
@@ -557,7 +558,7 @@ namespace WpfPrintFromImap
             }
             catch(Exception ex)
             {
-
+                _ = MessageBox.Show(ex.Message, "Exception caught: BrnPrint_Click", MessageBoxButton.OK, MessageBoxImage.Exclamation);
             }
         }
         

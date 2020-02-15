@@ -30,10 +30,11 @@ namespace WpfPrintFromImap
             
             await Task.Run(() =>
             {
+                
                 MWobj.OpenConnectMails(this);
-            
             });
             MWobj.PopulateListBox(); //this will be populated when OpenConnectMails is done.
+            
             this.Close();
         }
         

@@ -1,4 +1,12 @@
 ----------------
+-- 2020.02.15 --
+----------------
+Changed the CredentialUtil class to the following: public class CredentialUtil : IDisposable
+Removed static in all member-functions and made it disposable. The way it was made up before I could not be sure that the 
+object was actually disposed of. So I made some changes that makes sure that no data si "left behind". That's my intention at least. I'v debugged it and it seems like it's ok.
+
+
+----------------
 -- 2020.02.14 --
 ----------------
 Two major differences:

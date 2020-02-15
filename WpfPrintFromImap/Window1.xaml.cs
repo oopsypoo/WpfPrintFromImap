@@ -84,8 +84,9 @@ namespace WpfPrintFromImap
                 try
                 {
                     string username = this.txtBxUserName.Text;
-                    
-                    client.Authenticate(username, CredentialUtil.GetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName()));
+                    var cu = new CredentialUtil();
+                    client.Authenticate(username, cu.GetPass());
+                    cu.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -93,7 +94,7 @@ namespace WpfPrintFromImap
                     return false;
                 }
                 client.Disconnect(true);
-                
+                client.Dispose();
                 return true;
             }
         }
@@ -122,7 +123,9 @@ namespace WpfPrintFromImap
                 //Get from vault
                 //this.txtBxPassword.Password = System.Text.Encoding.UTF8.GetString(pswd);
                 //fix this...not returning the credentials
-                this.txtBxPassword.Password = CredentialUtil.GetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName());
+                var cu = new CredentialUtil();
+                this.txtBxPassword.Password = cu.GetPass();
+                cu.Dispose();
                 
                 this.lstBxPrinterAdhesiveLabel.SelectedValue = appConfig.AdhessivePrinter;
 /*                if (this.lstBxPrinterAdhesiveLabel.SelectedValue == null)
@@ -181,13 +184,15 @@ namespace WpfPrintFromImap
             appConfig.SerializeAppConfig();
             if (!bError)
             {
-                CredentialUtil.SetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName(), null, txtBxPassword.Password, PersistanceType.LocalComputer);
+                var cu = new CredentialUtil();
+                cu.SetCredentials(((MainWindow)Application.Current.MainWindow).GetCredentialName(), null, txtBxPassword.Password, PersistanceType.LocalComputer);
+                cu.Dispose();
                 
                 if (this.date_changed)
                 {
                     var mw = ((MainWindow)Application.Current.MainWindow);
                     mw.lstBxMails.Items.Clear();
-                    mw.mailSnippets_RemoveAll();
+                    mw.MailSnippets_RemoveAll();
                     mw.txtPackingDay.Text = "Gjeldende: " + packingday;
                 }
                 //close window
